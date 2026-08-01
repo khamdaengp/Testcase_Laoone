@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survey Test Case Tracker</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#151b23;
+    --panel-2:#1c232d;
+    --border:#2a323d;
+    --text:#e6edf3;
+    --text-dim:#8b96a5;
+    --accent:#4f8cff;
+    --accent-dim:#2c4a80;
+    --pass:#3fb950;
+    --pass-bg:rgba(63,185,80,0.12);
+    --fail:#f85149;
+    --fail-bg:rgba(248,81,73,0.12);
+    --pending:#d29922;
+    --pending-bg:rgba(210,153,34,0.12);
+    --high:#f85149;
+    --medium:#d29922;
+    --low:#58a6ff;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(ellipse at top,#111925 0%,var(--bg) 55%);
+    color:var(--text);
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1300px;margin:0 auto;}
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:20px;
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 6px;
+  }
+  h1{margin:0;font-size:24px;font-weight:650;letter-spacing:-0.01em;}
+  .subtitle{color:var(--text-dim);font-size:13px;margin-top:6px;}
+
+  .stats{display:flex;gap:10px;flex-wrap:wrap;}
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 16px;
+    min-width:84px;
+    text-align:center;
+  }
+  .stat .n{font-family:var(--mono);font-size:20px;font-weight:700;}
+  .stat .l{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .stat.total .n{color:var(--text);}
+  .stat.pass .n{color:var(--pass);}
+  .stat.fail .n{color:var(--fail);}
+  .stat.pending .n{color:var(--pending);}
+
+  .import-panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    margin-bottom:18px;
+    overflow:hidden;
+  }
+  .import-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 18px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .import-header h3{margin:0;font-size:14px;font-weight:650;}
+  .toggle-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:11.5px;
+    padding:5px 11px;
+    border-radius:7px;
+    cursor:pointer;
+  }
+  .toggle-btn:hover{color:var(--text);border-color:var(--accent-dim);}
+  .import-body{
+    padding:0 18px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .import-body.collapsed{display:none;}
+  .import-row{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+  }
+  .import-row.inline{
+    flex-direction:row;
+    align-items:flex-end;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .import-row label{
+    font-size:11.5px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .import-row input, .import-row select{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 12px;
+    color:var(--text);
+    font-size:13px;
+    outline:none;
+    min-width:220px;
+    flex:1;
+  }
+  .import-row input:focus, .import-row select:focus{border-color:var(--accent);}
+  .mini-btn{
+    background:var(--panel-2);
+    border:1px solid var(--accent-dim);
+    color:var(--accent);
+    font-size:12.5px;
+    font-weight:600;
+    padding:9px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .15s;
+  }
+  .mini-btn:hover{background:var(--accent-dim);color:#fff;}
+  .import-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .import-btn{
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:#fff;
+    font-size:13px;
+    font-weight:650;
+    padding:10px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:filter .15s;
+  }
+  .import-btn:hover{filter:brightness(1.1);}
+  .import-msg{
+    font-size:12.5px;
+    padding:9px 12px;
+    border-radius:8px;
+    display:none;
+  }
+  .import-msg.show{display:block;}
+  .import-msg.ok{background:var(--pass-bg);color:var(--pass);}
+  .import-msg.err{background:var(--fail-bg);color:var(--fail);}
+  .import-msg.info{background:rgba(79,140,255,0.12);color:var(--accent);}
+  .import-hint{
+    font-size:11.5px;
+    color:var(--text-dim);
+    line-height:1.6;
+    border-top:1px dashed var(--border);
+    padding-top:12px;
+  }
+  .import-hint code{
+    background:var(--panel-2);
+    padding:1px 5px;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text);
+  }
+
+  .toolbar{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:18px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+  }
+  .search-box{
+    position:relative;
+    flex:1;
+    min-width:220px;
+  }
+  .search-box input{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:9px 12px 9px 32px;
+    color:var(--text);
+    font-size:13px;
+    outline:none;
+    transition:border-color .15s;
+  }
+  .search-box input:focus{border-color:var(--accent);}
+  .search-box svg{
+    position:absolute;left:10px;top:50%;transform:translateY(-50%);
+    width:14px;height:14px;stroke:var(--text-dim);
+  }
+  .filter-group{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:12.5px;
+    padding:7px 13px;
+    border-radius:999px;
+    cursor:pointer;
+    user-select:none;
+    transition:all .15s;
+    white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--accent-dim);color:var(--text);}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .chip.active.pass{background:var(--pass);border-color:var(--pass);}
+  .chip.active.fail{background:var(--fail);border-color:var(--fail);}
+  .chip.active.pending{background:var(--pending);border-color:var(--pending);}
+
+  select.prio-filter{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:12.5px;
+    padding:8px 10px;
+    border-radius:8px;
+    outline:none;
+    cursor:pointer;
+  }
+
+  .reset-btn{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    font-size:12.5px;
+    padding:8px 13px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .reset-btn:hover{border-color:var(--fail);color:var(--fail);}
+
+  .table-container{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-dim);
+    background:var(--panel-2);
+    padding:11px 14px;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+    position:sticky;top:0;
+  }
+  tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+  td{padding:12px 14px;vertical-align:top;color:var(--text);}
+  td.id{font-family:var(--mono);color:var(--accent);font-weight:600;white-space:nowrap;}
+  td.scenario{color:var(--text-dim);white-space:nowrap;}
+  td.title{font-weight:500;max-width:230px;}
+  td.steps, td.expected, td.precond{color:var(--text-dim);max-width:260px;line-height:1.5;font-size:12.5px;}
+  td.steps ol{margin:0;padding-left:16px;}
+  td.steps li{margin-bottom:2px;}
+  td.tab-source{font-size:11px;color:var(--text-dim);white-space:nowrap;}
+
+  .prio{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:6px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+  .prio.High{background:rgba(248,81,73,0.14);color:var(--high);}
+  .prio.Medium{background:rgba(210,153,34,0.14);color:var(--medium);}
+  .prio.Low{background:rgba(88,166,255,0.14);color:var(--low);}
+
+  .status-select{
+    appearance:none;
+    -webkit-appearance:none;
+    border-radius:7px;
+    padding:6px 28px 6px 11px;
+    font-size:12px;
+    font-weight:700;
+    border:1px solid transparent;
+    cursor:pointer;
+    outline:none;
+    background-repeat:no-repeat;
+    background-position:right 8px center;
+    background-size:11px;
+    min-width:118px;
+  }
+  .status-select.Pending{
+    background-color:var(--pending-bg);color:var(--pending);border-color:rgba(210,153,34,0.35);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d29922' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+  .status-select.Pass{
+    background-color:var(--pass-bg);color:var(--pass);border-color:rgba(63,185,80,0.35);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233fb950' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+  .status-select.Fail{
+    background-color:var(--fail-bg);color:var(--fail);border-color:rgba(248,81,73,0.35);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f85149' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+  .status-select option{background:var(--panel-2);color:var(--text);}
+
+  .empty-state{
+    padding:60px 20px;
+    text-align:center;
+    color:var(--text-dim);
+  }
+  .empty-state svg{width:38px;height:38px;stroke:var(--border);margin-bottom:10px;}
+
+  .progress-wrap{
+    margin-top:20px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px 18px;
+  }
+  .progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:8px;}
+  .progress-bar{height:8px;background:var(--panel-2);border-radius:5px;overflow:hidden;display:flex;}
+  .progress-bar .seg{height:100%;transition:width .3s;}
+  .progress-bar .seg.pass{background:var(--pass);}
+  .progress-bar .seg.fail{background:var(--fail);}
+
+  footer{margin-top:22px;text-align:center;color:var(--text-dim);font-size:11.5px;}
+
+  .sync-bar{
+    font-size:12px;
+    color:var(--text-dim);
+    padding:2px 2px 0;
+    min-height:16px;
+    transition:color .2s;
+  }
+  .sync-bar.ok{color:var(--pass);}
+  .sync-bar.err{color:var(--fail);}
+  .sync-bar.info{color:var(--accent);}
+
+  @media (max-width:720px){
+    td.steps, td.expected, td.precond{max-width:160px;}
+    .table-container{overflow-x:auto;}
+    table{min-width:1000px;}
+    .import-row input, .import-row select{min-width:100%;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">QA · Survey Feature</p>
+      <h1>Bảng theo dõi Test Case</h1>
+      <p class="subtitle">Nhập test case từ Google Sheet, sau đó cập nhật kết quả Pass/Fail và lọc theo trạng thái, mức độ ưu tiên hoặc mã Test Case.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="import-panel">
+    <div class="import-header" id="importHeader">
+      <h3>📥 Nhập dữ liệu từ Google Sheet</h3>
+      <button class="toggle-btn" id="toggleImport">Ẩn / Hiện</button>
+    </div>
+    <div class="import-body" id="importBody">
+      <div class="import-row">
+        <label>Link hoặc ID Google Sheet</label>
+        <input id="sheetIdInput" type="text" placeholder="https://docs.google.com/spreadsheets/d/1AbC.../edit">
+      </div>
+      <div class="import-row inline">
+        <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:5px;">
+          <label>Apps Script Web App URL (tùy chọn — để ghi ngược Status về Sheet)</label>
+          <input id="webhookUrlInput" type="text" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+        </div>
+        <button class="mini-btn" id="refreshTabsBtn" type="button">🔄 Lấy tên tab thật</button>
+      </div>
+      <div class="import-row" id="tabNameRow">
+        <label>Chọn tab</label>
+        <select id="tabNameInput"></select>
+      </div>
+      <div class="import-actions">
+        <button class="import-btn" id="importBtn" type="button">Nhập dữ liệu</button>
+        <button class="reset-btn" id="clearDataBtn" type="button">Xóa dữ liệu hiện tại</button>
+      </div>
+      <div class="import-msg" id="importMsg"></div>
+      <div class="import-hint">
+        Hỗ trợ đọc các cột: <code>Mã test case</code>, <code>Mục đích kiểm thử</code>, <code>Các bước thực hiện</code>, <code>Kết quả mong đợi</code>,...<br><br>
+        <strong>Lấy tất cả các tab:</strong> Chọn "-- Tải tất cả các tab --" trong danh sách dropdown. Trình duyệt sẽ quét toàn bộ 15 tab và gom chung vào bảng này.
+      </div>
+    </div>
+  </div>
+
+  <div class="sync-bar" id="syncStatusText"></div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="searchInput" type="text" placeholder="Tìm theo Mã Test Case hoặc tiêu đề...">
+    </div>
+    <div class="filter-group" id="statusFilters"></div>
+    <select class="prio-filter" id="prioFilter">
+      <option value="all">Tất cả mức độ</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+    <button class="reset-btn" id="resetBtn">Đặt lại bộ lọc</button>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Tiến độ kiểm thử</span>
+      <span id="progressText">0 / 0 đã kiểm thử</span>
+    </div>
+    <div class="progress-bar">
+      <div class="seg pass" id="segPass" style="width:0%"></div>
+      <div class="seg fail" id="segFail" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã Test Case</th>
+          <th>Scenario</th>
+          <th>Title</th>
+          <th>Pre-condition</th>
+          <th>Test Steps</th>
+          <th>Expected Result</th>
+          <th>Priority</th>
+          <th>Nguồn Tab</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <div id="emptyStateText">Không tìm thấy test case phù hợp với bộ lọc hiện tại.</div>
+    </div>
+  </div>
+
+  <footer>Dữ liệu chỉ lưu trong phiên làm việc hiện tại của trình duyệt — tải lại trang sẽ mất dữ liệu, hãy nhập lại từ Google Sheet khi cần.</footer>
+</div>
+
+<script>
+let rawData = [];
+const state = {};
+
+// Danh sách tên tab cố định của dự án — dùng để gợi ý (datalist) và làm dropdown "Chọn tab" khi chưa có API Key
+const tabNames = [
+  "1. Đăng nhập đăng xuất",
+  "2. Splash screen",
+  "3. Survey đăng nhập",
+  "4. Màn hình Home",
+  "5. Màn hình quan tâm",
+  "6. AboutUnitel",
+  "7. Thông báo",
+  "8. Tài khoản",
+  "9. Bộ giải pháp phổ biến",
+  "10. Bộ giải pháp theo lĩnh vực",
+  "11. Apps của tôi",
+  "12. Term & Condition",
+  "Tenant Bộ quốc phòng",
+  "Tenant Thủ đô Vientiane",
+  "Tenant Unitel"
+];
+
+// Danh sách tên tab THẬT lấy trực tiếp từ Google Sheet qua Apps Script
+// (chính xác 100%, tránh lệch do khoảng trắng ẩn/ký tự khác với danh sách tĩnh ở trên)
+let liveTabNames = null;
+
+function populateTabNameSuggestions(){
+  const sel = document.getElementById("tabNameInput");
+  if(!sel) return;
+  const names = liveTabNames && liveTabNames.length ? liveTabNames : tabNames;
+  sel.innerHTML = '<option value="ALL">-- Tải tất cả các tab --</option>' +
+    names.map(name => `<option value="${escapeHtmlAttr(name)}">${escapeHtmlAttr(name)}</option>`).join("");
+}
+
+function escapeHtmlAttr(str){
+  return (str || "").toString().replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Gọi Apps Script Web App (action=listSheets) để lấy tên tab CHÍNH XÁC,
+// tránh lỗi gviz âm thầm rơi về tab đầu tiên khi tên tab không khớp tuyệt đối.
+function fetchRealTabNames(){
+  const url = getWebhookUrl();
+  if(!url){
+    setImportMsg("Vui lòng nhập Apps Script Web App URL trước khi lấy tên tab thật.", "err");
+    return;
+  }
+  setImportMsg("Đang lấy danh sách tab thật từ Google Sheet...", "info");
+
+  const cbName = "listSheetsCb_" + Date.now();
+  const timeout = setTimeout(() => { cleanup(); setImportMsg("✕ Hết thời gian chờ khi lấy danh sách tab.", "err"); }, 12000);
+  function cleanup(){
+    clearTimeout(timeout);
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+  }
+  window[cbName] = function(res){
+    cleanup();
+    if(res && res.ok && Array.isArray(res.sheets) && res.sheets.length){
+      liveTabNames = res.sheets;
+      populateTabNameSuggestions();
+      setImportMsg(`✓ Đã lấy ${res.sheets.length} tên tab thật từ Sheet "${res.spreadsheetName || ""}". Dropdown "Chọn tab" đã được cập nhật.`, "ok");
+    }else{
+      setImportMsg(`✕ Không lấy được danh sách tab: ${(res && res.error) || "phản hồi không hợp lệ"}`, "err");
+    }
+  };
+  const qs = "action=listSheets&callback=" + encodeURIComponent(cbName);
+  const script = document.createElement("script");
+  script.src = `${url}?${qs}`;
+  script.onerror = () => { cleanup(); setImportMsg("✕ Không thể kết nối tới Apps Script Web App.", "err"); };
+  document.body.appendChild(script);
+}
+
+let currentStatusFilter = "all";
+let currentPrioFilter = "all";
+let currentSearch = "";
+let currentSheetName = "";
+
+const statusFilterDefs = [
+  { key: "all", label: "Tất cả" },
+  { key: "Pass", label: "✓ Pass" },
+  { key: "Fail", label: "✕ Fail" },
+  { key: "Pending", label: "○ Chưa test" }
+];
+
+document.getElementById("refreshTabsBtn").addEventListener("click", fetchRealTabNames);
+
+
+function getWebhookUrl(){
+  return document.getElementById("webhookUrlInput").value.trim();
+}
+
+// Vì cùng một ID (VD "TC_1") có thể lặp lại ở nhiều tab khác nhau,
+// dùng key kết hợp tab + id để tránh nhầm lẫn trạng thái/đồng bộ giữa các tab.
+function rowKey(row){
+  return (row._sheetName || "") + "::" + row.id;
+}
+
+function setSyncMsg(text, type){
+  const el = document.getElementById("syncStatusText");
+  el.textContent = text;
+  el.className = "sync-bar" + (type ? " " + type : "");
+}
+
+function syncStatusToSheet(id, status, sheetName){
+  const url = getWebhookUrl();
+  if(!url) return;
+
+  const targetSheet = sheetName || currentSheetName;
+
+  if(!targetSheet || targetSheet === "ALL"){
+    setSyncMsg("⚠ Không xác định được tên tab để đồng bộ.", "err");
+    return;
+  }
+  setSyncMsg(`Đang đồng bộ ${id} → ${status} trên tab [${targetSheet}]...`, "info");
+
+  // Dùng kỹ thuật JSONP (giống lúc nhập dữ liệu) thay vì fetch no-cors,
+  // để có thể đọc được kết quả thật (thành công/thất bại) từ Apps Script.
+  const cbName = "syncCb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+  const timeout = setTimeout(() => {
+    cleanup();
+    setSyncMsg(`✕ Hết thời gian chờ khi đồng bộ ${id}. Kiểm tra lại URL Web App / quyền truy cập.`, "err");
+  }, 12000);
+
+  function cleanup(){
+    clearTimeout(timeout);
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+  }
+
+  window[cbName] = function(res){
+    cleanup();
+    if(res && res.ok){
+      const time = new Date().toLocaleTimeString("vi-VN");
+      setSyncMsg(`✓ Đã cập nhật ${id} → ${status} lúc ${time} (dòng ${res.row} trên tab "${res.sheetName}").`, "ok");
+    }else{
+      setSyncMsg(`✕ Đồng bộ thất bại cho ${id}: ${(res && res.error) || "lỗi không xác định"}`, "err");
+    }
+  };
+
+  const qs = "action=updateStatus"
+    + "&sheetName=" + encodeURIComponent(targetSheet)
+    + "&testCaseId=" + encodeURIComponent(id)
+    + "&status=" + encodeURIComponent(status)
+    + "&callback=" + encodeURIComponent(cbName);
+
+  const script = document.createElement("script");
+  script.src = `${url}?${qs}`;
+  script.onerror = () => {
+    cleanup();
+    setSyncMsg(`✕ Không thể kết nối tới Apps Script Web App cho ${id}. Kiểm tra lại URL và deployment.`, "err");
+  };
+  document.body.appendChild(script);
+}
+
+function renderStatusFilters(){
+  const el = document.getElementById("statusFilters");
+  el.innerHTML = "";
+  statusFilterDefs.forEach(def => {
+    const chip = document.createElement("div");
+    chip.className = "chip" + (currentStatusFilter === def.key ? " active " + def.key.toLowerCase() : "");
+    chip.textContent = def.label;
+    chip.onclick = () => { currentStatusFilter = def.key; render(); };
+    el.appendChild(chip);
+  });
+}
+
+function matchesFilters(row){
+  if(currentStatusFilter !== "all" && state[rowKey(row)] !== currentStatusFilter) return false;
+  if(currentPrioFilter !== "all" && row.priority !== currentPrioFilter) return false;
+  if(currentSearch){
+    const q = currentSearch.toLowerCase();
+    if(!row.id.toLowerCase().includes(q) && !row.title.toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+
+function renderStats(){
+  const total = rawData.length;
+  const pass = rawData.filter(r => state[rowKey(r)] === "Pass").length;
+  const fail = rawData.filter(r => state[rowKey(r)] === "Fail").length;
+  const pending = total - pass - fail;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat total"><div class="n">${total}</div><div class="l">Tổng số</div></div>
+    <div class="stat pass"><div class="n">${pass}</div><div class="l">Pass</div></div>
+    <div class="stat fail"><div class="n">${fail}</div><div class="l">Fail</div></div>
+    <div class="stat pending"><div class="n">${pending}</div><div class="l">Chưa test</div></div>
+  `;
+
+  const tested = pass + fail;
+  document.getElementById("progressText").textContent = `${tested} / ${total} đã kiểm thử`;
+  document.getElementById("segPass").style.width = total ? (pass/total*100)+"%" : "0%";
+  document.getElementById("segFail").style.width = total ? (fail/total*100)+"%" : "0%";
+}
+
+function escapeHtml(str){
+  return (str||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function renderTable(){
+  const tbody = document.getElementById("tableBody");
+  const filtered = rawData.filter(matchesFilters);
+  tbody.innerHTML = "";
+
+  document.getElementById("emptyState").style.display = filtered.length ? "none" : "block";
+  document.getElementById("emptyStateText").textContent = rawData.length === 0
+    ? 'Chưa có dữ liệu. Dán link Google Sheet ở phần "Nhập dữ liệu từ Google Sheet" phía trên để bắt đầu.'
+    : "Không tìm thấy test case phù hợp với bộ lọc hiện tại.";
+
+  filtered.forEach(row => {
+    const tr = document.createElement("tr");
+    const steps = row.steps && row.steps.length ? row.steps : [""];
+    const stepsHtml = steps.length > 1
+      ? "<ol>" + steps.map(s => `<li>${escapeHtml(s)}</li>`).join("") + "</ol>"
+      : escapeHtml(steps[0]);
+    const key = rowKey(row);
+
+    tr.innerHTML = `
+      <td class="id">${escapeHtml(row.id)}</td>
+      <td class="scenario">${escapeHtml(row.scenario)}</td>
+      <td class="title">${escapeHtml(row.title)}</td>
+      <td class="precond">${escapeHtml(row.precond)}</td>
+      <td class="steps">${stepsHtml}</td>
+      <td class="expected">${escapeHtml(row.expected)}</td>
+      <td><span class="prio ${row.priority}">${escapeHtml(row.priority)}</span></td>
+      <td class="tab-source">${escapeHtml(row._sheetName || "")}</td>
+      <td>
+        <select class="status-select ${state[key]}" data-id="${escapeHtmlAttr(row.id)}" data-sheet="${escapeHtmlAttr(row._sheetName || "")}" data-key="${escapeHtmlAttr(key)}">
+          <option value="Pending" ${state[key]==="Pending"?"selected":""}>Chưa test</option>
+          <option value="Pass" ${state[key]==="Pass"?"selected":""}>Pass</option>
+          <option value="Fail" ${state[key]==="Fail"?"selected":""}>Fail</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll(".status-select").forEach(sel => {
+    sel.addEventListener("change", e => {
+      const id = e.target.getAttribute("data-id");
+      const sheetName = e.target.getAttribute("data-sheet");
+      const key = e.target.getAttribute("data-key");
+      const newStatus = e.target.value;
+      state[key] = newStatus;
+      syncStatusToSheet(id, newStatus, sheetName);
+      render();
+    });
+  });
+}
+
+function render(){
+  renderStatusFilters();
+  renderStats();
+  renderTable();
+}
+
+document.getElementById("searchInput").addEventListener("input", e => {
+  currentSearch = e.target.value.trim();
+  render();
+});
+document.getElementById("prioFilter").addEventListener("change", e => {
+  currentPrioFilter = e.target.value;
+  render();
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  currentStatusFilter = "all";
+  currentPrioFilter = "all";
+  currentSearch = "";
+  document.getElementById("searchInput").value = "";
+  document.getElementById("prioFilter").value = "all";
+  render();
+});
+
+document.getElementById("toggleImport").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("importBody").classList.toggle("collapsed");
+});
+
+function extractSheetId(input){
+  input = (input || "").trim();
+  const m = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if(m) return m[1];
+  return input;
+}
+
+function extractGid(input){
+  input = (input || "").trim();
+  const m = input.match(/[#&?]gid=(\d+)/);
+  return m ? m[1] : null;
+}
+
+function stripInvisible(s){
+  // Xóa zero-width space, BOM và các ký tự ẩn thường dính khi copy/paste từ Sheet
+  return (s || "").toString().replace(/[\u200B-\u200D\uFEFF\u00A0]/g, m => m === "\u00A0" ? " " : "");
+}
+
+function normalizeHeader(h){
+  return stripInvisible(h).toLowerCase().trim().replace(/\s+/g, " ").replace(/[-–—]/g, "-");
+}
+
+// Map hỗ trợ tiếng Việt theo project thực tế
+const HEADER_MAP = {
+  "test case id": "id", "id": "id", "mã test case": "id",
+  "test scenario": "scenario", "scenario": "scenario",
+  "test case title": "title", "title": "title", "test title": "title", "mục đích kiểm thử": "title",
+  "pre-condition": "precond", "precondition": "precond", "pre condition": "precond", "tiền điều kiện": "precond",
+  "test steps": "steps", "steps": "steps", "các bước thực hiện": "steps",
+  "expected result": "expected", "expected": "expected", "kết quả mong đợi": "expected", "kết quả mong muốn": "expected",
+  "priority": "priority", "mức độ ưu tiên": "priority",
+  "status": "status", "trạng thái": "status"
+};
+
+function splitSteps(raw){
+  const str = stripInvisible(raw);
+  if(!str.trim()) return [""];
+  if(str.includes("\n")){
+    const parts = str.split("\n").map(s => s.trim()).filter(Boolean);
+    return parts.length ? parts : [str.trim()];
+  }
+  const parts = str.split(/(?=\d+\.\s)/).map(s => s.trim()).filter(Boolean);
+  return parts.length ? parts : [str.trim()];
+}
+
+function normalizePriority(raw){
+  const v = stripInvisible(raw).trim().toLowerCase();
+  if(v.startsWith("high") || v === "cao") return "High";
+  if(v.startsWith("low") || v === "thấp") return "Low";
+  return "Medium";
+}
+
+function normalizeStatus(raw){
+  // Xử lý cả trường hợp cell là boolean (checkbox) hoặc giá trị lỗi công thức
+  if(typeof raw === "boolean") return raw ? "Pass" : "Fail";
+  const v = stripInvisible(raw).trim().toLowerCase();
+  if(!v || v.startsWith("#")) return "Pending"; // rỗng hoặc lỗi công thức (#N/A, #REF!,...)
+  if(v === "true") return "Pass";
+  if(v === "false") return "Fail";
+  // Kiểm tra "fail" trước để "không đạt" không bị nhận nhầm thành "đạt" (Pass)
+  if(v.includes("fail") || v.includes("không đạt") || v.includes("ko đạt") || v === "ng") return "Fail";
+  if(v.includes("pass") || v.includes("đạt") || v === "ok") return "Pass";
+  return "Pending";
+}
+
+function rowsToTestCases(headerRow, dataRows, sourceSheetName = ""){
+  const colMap = headerRow.map(h => HEADER_MAP[normalizeHeader(h)] || null);
+  const results = [];
+  dataRows.forEach(row => {
+    const obj = { id: "", scenario: "", title: "", precond: "", steps: [""], expected: "", priority: "Medium", _sheetName: sourceSheetName };
+    let statusVal = "";
+    colMap.forEach((field, idx) => {
+      if(!field) return;
+      const cell = row[idx] !== undefined ? row[idx] : "";
+      if(field === "steps") obj.steps = splitSteps(cell);
+      else if(field === "priority") obj.priority = normalizePriority(cell);
+      else if(field === "status") statusVal = cell;
+      else obj[field] = stripInvisible(cell).trim();
+    });
+    if(!obj.id) return;
+    obj._status = normalizeStatus(statusVal);
+    results.push(obj);
+  });
+  return results;
+}
+
+function setImportMsg(text, type){
+  const el = document.getElementById("importMsg");
+  el.textContent = text;
+  el.className = "import-msg show" + (type ? " " + type : "");
+}
+
+// Tìm dòng nào thực sự là dòng tiêu đề cột (có thể không phải dòng 1
+// nếu phía trên có dòng tiêu đề lớn / dòng trống) bằng cách quét vài
+// dòng đầu tìm dòng có chứa tên cột ID đã biết.
+function findHeaderRowIndex(rows){
+  const idAliases = ["test case id", "id", "mã test case"];
+  const maxScan = Math.min(rows.length, 10);
+  for(let i = 0; i < maxScan; i++){
+    const normalized = (rows[i] || []).map(c => normalizeHeader(c));
+    if(normalized.some(h => idAliases.includes(h))) return i;
+  }
+  return 0; // fallback: coi dòng đầu tiên là header
+}
+
+function importViaJsonp(sheetId, tabName){
+  return new Promise((resolve, reject) => {
+    const cbName = "sheetCb_" + Date.now();
+    const timeout = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 12000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(json){
+      try{
+        // Không dùng headers=1 của gviz (dễ nhận nhầm dòng tiêu đề, đặc biệt
+        // khi phía trên có dòng tiêu đề lớn hoặc format lạ). Lấy toàn bộ dữ
+        // liệu thô, rồi tự dò dòng tiêu đề thật sự.
+        const allRows = (json.table.rows || []).map(r =>
+          (r.c || []).map(cell => cell ? (cell.f !== undefined && cell.f !== null ? cell.f : cell.v) : "")
+        );
+        const headerIdx = findHeaderRowIndex(allRows);
+        const headerRow = allRows[headerIdx] || [];
+        const dataRows = allRows.slice(headerIdx + 1);
+        cleanup();
+        resolve(rowsToTestCases(headerRow, dataRows, tabName));
+      }catch(e){ cleanup(); reject(e); }
+    };
+    const sheetParam = tabName ? `&sheet=${encodeURIComponent(tabName)}` : "";
+    // headers=0: lấy dữ liệu thô hoàn toàn, tự xử lý dòng tiêu đề ở phía trên
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${cbName}&headers=0${sheetParam}`;
+    const script = document.createElement("script");
+    script.src = url;
+    script.onerror = () => { cleanup(); reject(new Error("load error")); };
+    document.body.appendChild(script);
+  });
+}
+
+function applyImportedData(cases){
+  rawData = cases.map(c => ({
+    id: c.id, scenario: c.scenario, title: c.title, precond: c.precond, _sheetName: c._sheetName,
+    steps: c.steps && c.steps.length ? c.steps : [""], expected: c.expected, priority: c.priority
+  }));
+  Object.keys(state).forEach(k => delete state[k]);
+  cases.forEach(c => { state[rowKey(c)] = c._status || "Pending"; });
+
+  currentStatusFilter = "all";
+  currentPrioFilter = "all";
+  currentSearch = "";
+  document.getElementById("searchInput").value = "";
+  document.getElementById("prioFilter").value = "all";
+  render();
+}
+
+async function handleImport(){
+  const sheetIdRaw = document.getElementById("sheetIdInput").value.trim();
+  if(!sheetIdRaw){ setImportMsg("Vui lòng nhập link hoặc ID Google Sheet.", "err"); return; }
+  const sheetId = extractSheetId(sheetIdRaw);
+  const tabName = document.getElementById("tabNameInput").value;
+
+  setImportMsg("Đang nhập dữ liệu...", "info");
+  try{
+    let cases = [];
+
+    // Tải toàn bộ Tab
+    if(tabName === "ALL"){
+      const tabsToLoad = liveTabNames && liveTabNames.length ? liveTabNames : tabNames;
+      for (const tName of tabsToLoad) {
+        try {
+          const tabCases = await importViaJsonp(sheetId, tName);
+          cases = cases.concat(tabCases);
+        } catch (e) {
+          console.warn(`Bỏ qua tab ${tName} do lỗi hoặc format không đúng.`);
+        }
+      }
+    }
+    // Tải tab chỉ định
+    else{
+      cases = await importViaJsonp(sheetId, tabName);
+    }
+
+    if(!cases.length) throw new Error("empty");
+
+    // Debug: in ra console để đối chiếu giá trị Status thô đọc được từ Sheet
+    console.log("[Import debug] Mẫu 5 dòng đầu:", cases.slice(0, 5).map(c => ({ id: c.id, sheet: c._sheetName, _status: c._status })));
+
+    applyImportedData(cases);
+    currentSheetName = tabName || currentSheetName;
+
+    const passCount = cases.filter(c => c._status === "Pass").length;
+    const failCount = cases.filter(c => c._status === "Fail").length;
+    const pendingCount = cases.length - passCount - failCount;
+    const breakdown = `(Pass: ${passCount}, Fail: ${failCount}, Chưa test: ${pendingCount})`;
+
+    if(tabName === "ALL"){
+      setImportMsg(`✓ Đã nhập tổng cộng ${cases.length} test case từ tất cả các tab. ${breakdown}`, "ok");
+    } else {
+      setImportMsg(`✓ Đã nhập ${cases.length} test case từ tab "${tabName || "(mặc định)"}". ${breakdown}`, "ok");
+    }
+  }catch(err){
+    setImportMsg('Nhập dữ liệu thất bại. Kiểm tra: Sheet đã chia sẻ "Anyone with the link", và dòng đầu tiên là tiêu đề cột đúng định dạng.', "err");
+  }
+}
+
+document.getElementById("importBtn").addEventListener("click", handleImport);
+document.getElementById("clearDataBtn").addEventListener("click", () => {
+  rawData = [];
+  Object.keys(state).forEach(k => delete state[k]);
+  currentSheetName = "";
+  currentStatusFilter = "all";
+  currentPrioFilter = "all";
+  currentSearch = "";
+  document.getElementById("searchInput").value = "";
+  document.getElementById("prioFilter").value = "all";
+  setImportMsg("Đã xóa toàn bộ dữ liệu hiện tại.", "ok");
+  render();
+});
+
+populateTabNameSuggestions();
+render();
+</script>
+</body>
+</html>
